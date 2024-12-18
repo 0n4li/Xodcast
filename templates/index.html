@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Podcast Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/ace.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/ext-language_tools.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/ext-beautify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.36.5/mode-json.min.js"></script>
+    <script src="{{ url_for('static', filename='components/panel.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/togglebutton.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/jsonviewer.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/loading.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/ace.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/audioplayer.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/voiceselector.js') }}"></script>
+    <script src="{{ url_for('static', filename='components/settings.js') }}"></script>
+    <style>
+        body {
+            overflow: hidden;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex overflow-hidden">
+    <!-- Left Panel Menu -->
+    <div class="w-64 bg-white shadow-lg h-screen fixed left-0 overflow-y-auto">
+        <div class="p-4">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">
+                <center>Xodcast</center>
+            </h2>
+            <nav>
+                <a href="#"
+                    class="block py-2 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg mb-2 bg-blue-50 text-blue-600 active-nav-item"
+                    data-nav="generate-script">
+                    Generate Script
+                </a>
+                <a href="#" class="block py-2 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg mb-2"
+                    data-nav="generate-podcast">
+                    Generate Podcast
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 ml-64">
+        <div class="container p-4 flex flex-col h-full">
+            <div id="generate-script-panel" data-panel="generate-script">
+                <div data-slot="left">
+                    <div data-slot="title">Generate Script</div>
+                    <div data-slot="content" class="flex flex-col h-full mb-4">
+                        <textarea id="topic"
+                            class="flex-1 w-full px-3 py-2 border border-gray-300 rounded-md resize-none font-mono h-full"
+                            placeholder="Enter a detailed description of your podcast topic...
+
+Example:
+Title: The Future of AI in Healthcare
+Description: Discuss the current state of AI in healthcare, focusing on:
+- Recent breakthroughs in medical diagnosis
+- AI-powered drug discovery
+- Ethical considerations
+- Future predictions for the next decade
+
+Or you may paste your entire content here"></textarea>
+
+                    </div>
+                    <div data-slot="footer">
+                        <div class="flex items-center justify-between">
+                            <button id="generateScriptButton"
+                                class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors text-lg">
+                                Generate Script
+                            </button>
+                            <button id="openSettings1"
+                                class="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24">
+                                    <path
+                                        d="M24 13.616v-3.232c-1.651-.587-2.694-.752-3.219-2.019v-.001c-.527-1.271.1-2.134.847-3.707l-2.285-2.285c-1.561.742-2.433 1.375-3.707.847h-.001c-1.269-.526-1.435-1.576-2.019-3.219h-3.232c-.582 1.635-.749 2.692-2.019 3.219h-.001c-1.271.528-2.132-.098-3.707-.847l-2.285 2.285c.745 1.568 1.375 2.434.847 3.707-.527 1.271-1.584 1.438-3.219 2.02v3.232c1.632.58 2.692.749 3.219 2.019.53 1.282-.114 2.166-.847 3.707l2.285 2.286c1.562-.743 2.434-1.375 3.707-.847h.001c1.27.526 1.436 1.579 2.019 3.219h3.232c.582-1.636.75-2.69 2.027-3.222h.001c1.262-.524 2.12.101 3.698.851l2.285-2.286c-.744-1.563-1.375-2.433-.848-3.706.527-1.271 1.588-1.44 3.221-2.021zm-12 2.384c-2.209 0-4-1.791-4-4s1.791-4 4-4 4 1.791 4 4-1.791 4-4 4z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div data-slot="right">
+                    <div data-slot="title">Generated Script</div>
+                    <div data-slot="actions">
+                        <div data-toggle="jsonToggle1" id="jsonToggle1"></div>
+                    </div>
+                    <div data-slot="content" class="flex flex-col overflow-y-auto mb-4 h-full">
+                        <div id="loadingIndicator1" data-loading-indicator="loadingIndicator1"
+                            class="flex-1 w-full flex h-full hidden"></div>
+                        <div id="jsonViewer1" data-json-viewer="jsonViewer1" class="flex flex-col h-full"></div>
+                    </div>
+                    <div data-slot="footer">
+                        <button id="proceedToGeneratePodcastButton"
+                            class="w-full bg-red-600 text-white py-3 px-4 rounded-md hover:bg-red-700 transition-colors text-lg">
+                            Proceed to Generate Podcast
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="generate-podcast-panel" data-panel="generate-podcast">
+                <div data-slot="left">
+                    <div data-slot="title">Generate Podcast</div>
+                    <div data-slot="actions">
+                        <div data-toggle="jsonToggle2" id="jsonToggle2"></div>
+                    </div>
+                    <div data-slot="content" class="flex flex-col overflow-y-auto mb-4 h-full">
+                        <div id="jsonViewer2" data-json-viewer="jsonViewer2" class="flex flex-col h-full"></div>
+                    </div>
+                    <div data-slot="footer">
+                        <div class="flex items-center justify-between">
+                            <button id="generateAudioButton"
+                                class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors text-lg">
+                                Generate Audio
+                            </button>
+                            <button id="openSettings2"
+                                class="ml-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24">
+                                    <path
+                                        d="M24 13.616v-3.232c-1.651-.587-2.694-.752-3.219-2.019v-.001c-.527-1.271.1-2.134.847-3.707l-2.285-2.285c-1.561.742-2.433 1.375-3.707.847h-.001c-1.269-.526-1.435-1.576-2.019-3.219h-3.232c-.582 1.635-.749 2.692-2.019 3.219h-.001c-1.271.528-2.132-.098-3.707-.847l-2.285 2.285c.745 1.568 1.375 2.434.847 3.707-.527 1.271-1.584 1.438-3.219 2.02v3.232c1.632.58 2.692.749 3.219 2.019.53 1.282-.114 2.166-.847 3.707l2.285 2.286c1.562-.743 2.434-1.375 3.707-.847h.001c1.27.526 1.436 1.579 2.019 3.219h3.232c.582-1.636.75-2.69 2.027-3.222h.001c1.262-.524 2.12.101 3.698.851l2.285-2.286c-.744-1.563-1.375-2.433-.848-3.706.527-1.271 1.588-1.44 3.221-2.021zm-12 2.384c-2.209 0-4-1.791-4-4s1.791-4 4-4 4 1.791 4 4-1.791 4-4 4z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div data-slot="right">
+                    <div data-slot="title">Generated Audio</div>
+                    <div data-slot="actions">
+                        <div data-toggle="audioToggle" id="audioToggle"></div>
+                    </div>
+                    <div data-slot="content" class="flex flex-col overflow-y-auto mb-4 h-full">
+                        <div id="loadingIndicator2" data-loading-indicator="loadingIndicator2"
+                            class="flex-1 w-full flex h-full hidden"></div>
+                        <div id="audioPlayer" data-audio-player="audioPlayer" class="flex flex-col h-full"></div>
+                    </div>
+                    <div data-slot="footer">
+                        <button id="downloadAudioButton" disabled
+                            class="w-full bg-gray-500 text-white py-3 px-4 rounded-md transition-colors text-lg">
+                            Download Audio
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsComponent1" data-settings-component="forScript"
+        class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-50">
+    </div>
+    <div id="settingsComponent2" data-settings-component="forPodcast"
+        class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-50">
+    </div>
+
+    <script>
+        // Tailwind CSS JIT (Just-in-Time) Configuration (for CDN usage)
+        tailwind.config = {
+            theme: {
+                extend: {
+                    // Add any custom configurations here
+                }
+            }
+        }
+    </script>
+
+    <script>
+
+        let jsonViewers = {};
+        let togglebuttons = {};
+        let loadingIndicators = {};
+        let audioPlayers = {};
+        let settingsComponents = {};
+        let voiceSelector = null;
+        const multiSpeakerVoices = {
+            "en-US-Studio-MultiSpeaker-R": {
+                "Gender": "FEMALE",
+                "Language": "English (US)",
+                "Voice type": "MultiSpeaker",
+                "Name": "Rosie",
+            },
+            "en-US-Studio-MultiSpeaker-S": {
+                "Gender": "MALE",
+                "Language": "English (US)",
+                "Voice type": "MultiSpeaker",
+                "Name": "Sam",
+            },
+            "en-US-Studio-MultiSpeaker-T": {
+                "Gender": "MALE",
+                "Language": "English (US)",
+                "Voice type": "MultiSpeaker",
+                "Name": "Tom",
+            },
+            "en-US-Studio-MultiSpeaker-U": {
+                "Gender": "MALE",
+                "Language": "English (US)",
+                "Voice type": "MultiSpeaker",
+                "Name": "Ulysses",
+            },
+        };
+        let settingsConfig = {
+            forScript: {
+                fields: [
+                    { id: 'hostName', type: 'text', label: 'Host Name', defaultValue: 'John Doe' },
+                    { id: 'hostGender', type: 'select', label: 'Host Gender', options: [{ value: 'male', text: 'Male' }, { value: 'female', text: 'Female' }], defaultValue: 'male' },
+                    { id: 'guestName', type: 'text', label: 'Guest Name', defaultValue: 'Bob Smith' },
+                    { id: 'guestGender', type: 'select', label: 'Guest Gender', options: [{ value: 'male', text: 'Male' }, { value: 'female', text: 'Female' }], defaultValue: 'female' },
+                    { id: 'podcastName', type: 'text', label: 'Podcast Name', defaultValue: 'XODCast' },
+                    { id: 'conversationType', type: 'select', label: 'Conversation Type', options: [{ value: 'casual', text: 'Casual' }, { value: 'formal', text: 'Formal' }, { value: 'in-depth', text: 'In-depth' }, { value: 'satirical', text: 'Satirical' }], defaultValue: 'casual' },
+                    { id: 'conversationMode', type: 'select', label: 'Conversation Mode', options: [{ value: 'qna', text: 'Question and Answer' }, { value: 'discussion', text: 'Discussion' }, { value: 'debate', text: 'Debate' }], defaultValue: 'qna' },
+                    { id: 'conversationLength', type: 'range', label: 'Conversation Length', min: 1, max: 3, defaultValue: 2 },
+                    { id: 'emotionSlider', type: 'range', label: 'Emotion', min: 1, max: 3, defaultValue: 2 },
+                    { id: 'stutterSlider', type: 'range', label: 'Stutter/Repetition', min: 1, max: 3, defaultValue: 2 },
+                ],
+            },
+            forPodcast: {
+                fields: [
+                    {
+                        id: 'voiceSelector', type: 'custom', label: 'Voice Selector', tag: 'div', attributes: { id: 'voiceSelector', class: "voice-selector" }, onRender: (element, component) => {
+                            voiceSelector = new VoiceSelector({
+                                id: 'voiceSelector',
+                                voices: multiSpeakerVoices,
+                                defaultHostVoice: 'en-US-Studio-MultiSpeaker-R',
+                                defaultGuestVoice: 'en-US-Studio-MultiSpeaker-S',
+                                soundsPath: 'static/sounds/',
+                            });
+                            voiceSelector.render();
+                        }
+                    },
+                ]
+            },
+        };
+
+        function selectPanel(panelId) {
+            const navItems = document.querySelectorAll('[data-nav]');
+            navItems.forEach(item => {
+                item.classList.remove('bg-blue-50', 'text-blue-600', 'active-nav-item');
+                if (item.getAttribute('data-nav') === panelId) {
+                    item.classList.add('bg-blue-50', 'text-blue-600', 'active-nav-item');
+                }
+            });
+            const panels = document.querySelectorAll('[data-panel]');
+            panels.forEach(panel => {
+                panel.classList.add('hidden');
+                if (panel.getAttribute('data-panel') === panelId) {
+                    panel.classList.remove('hidden');
+                }
+            });
+        }
+
+        function renderPanels() {
+            document.querySelectorAll('[data-panel]').forEach(panel => {
+                let panelObj = new Panel({ id: panel.getAttribute('id') });
+                panelObj.render();
+            });
+        }
+
+        function renderToggleButtons() {
+            document.querySelectorAll('[data-toggle]').forEach(toggle => {
+                let toggleId = toggle.getAttribute('id');
+                let toggleObj = new ToggleButton({ id: toggleId, onLabel: 'JSON', offLabel: 'Visual', onChange: toggleChange });
+                toggleObj.render();
+                togglebuttons[toggleId] = toggleObj;
+            });
+        }
+
+        function toggleChange(id, newState) {
+            const match = id.match(/^jsonToggle(\d+)$/);
+            if (match) {
+                const viewerId = `jsonViewer${match[1]}`;
+                if (jsonViewers[viewerId]) {
+                    jsonViewers[viewerId].switchMode(newState ? 'json' : 'visual');
+                }
+            }
+        }
+
+        function renderJsonViewers() {
+            document.querySelectorAll('[data-json-viewer]').forEach(jsonViewer => {
+                let jsonViewerId = jsonViewer.getAttribute('id');
+                let jsonViewerObj = new JsonViewer({ id: jsonViewerId });
+                jsonViewerObj.render();
+                jsonViewerObj.clear();
+                jsonViewers[jsonViewerId] = jsonViewerObj;
+                const match = jsonViewerId.match(/^jsonViewer(\d+)$/);
+                if (match) {
+                    const toggleId = `jsonToggle${match[1]}`;
+                    if (togglebuttons[toggleId]) {
+                        jsonViewerObj.switchMode(togglebuttons[toggleId].getState() ? 'json' : 'visual');
+                    }
+                }
+            });
+        }
+
+        function renderLoadingIndicators() {
+            document.querySelectorAll('[data-loading-indicator]').forEach(loadingIndicator => {
+                let loadingIndicatorId = loadingIndicator.getAttribute('id');
+                let loadingIndicatorObj = new LoadingIndicator({ id: loadingIndicatorId });
+                loadingIndicatorObj.render();
+                loadingIndicatorObj.hide();
+                loadingIndicators[loadingIndicatorId] = loadingIndicatorObj;
+            });
+        }
+
+        function renderAudioPlayers() {
+            document.querySelectorAll('[data-audio-player]').forEach(audioPlayer => {
+                let audioPlayerId = audioPlayer.getAttribute('id');
+                let audioPlayerObj = new AudioPlayer({ id: audioPlayerId, autoPlay: true, onended: (taskId) => { 
+                    if (taskId) {
+                        fetch(`/ack_task/${taskId}`, {
+                            method: 'POST', keepalive: true
+                        });
+                    }
+                } });
+                audioPlayerObj.render();
+                audioPlayers[audioPlayerId] = audioPlayerObj;
+            });
+        }
+
+        function renderSettingsComponents() {
+            document.querySelectorAll('[data-settings-component]').forEach(settingsComponent => {
+                let settingsComponentId = settingsComponent.getAttribute('id');
+                let config = settingsConfig[settingsComponent.getAttribute('data-settings-component')];
+                let settingsComponentObj = new SettingsComponent({ id: settingsComponentId, config: config });
+                settingsComponentObj.render();
+                settingsComponents[settingsComponentId] = settingsComponentObj;
+            });
+        }
+
+        // Function to set a cookie
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            const encodedValue = encodeURIComponent(value);
+            document.cookie = name + "=" + encodedValue + expires + "; path=/";
+        }
+
+        // Function to get a cookie
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) {
+                    const encodedValue = c.substring(nameEQ.length, c.length);
+                    const value = decodeURIComponent(encodedValue);
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        function generateScript() {
+            if (!navigator.cookieEnabled) {
+                alert("Cookies are disabled. Please enable cookies to save the topic.");
+                return;
+            }
+            const button = document.getElementById('generateScriptButton');
+            button.disabled = true;
+            button.innerHTML = 'Generating...';
+            const loadingIndicator = loadingIndicators['loadingIndicator1'];
+            loadingIndicator.show();
+            const jsonViewer = jsonViewers['jsonViewer1'];
+            jsonViewer.clear();
+            jsonViewer.hide();
+            const topicValue = document.getElementById('topic').value;
+            // Save the topic to a cookie
+            setCookie('topic', topicValue, 7); // Expires in 7 days
+            fetch('/generate/script', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ topic: topicValue, settings: settingsComponents['settingsComponent1'].getSettings() })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentConversationJson = data.conversation;
+                        jsonViewer.setJson(JSON.stringify(data.conversation, null, 2));
+                        jsonViewer.switchMode(togglebuttons['jsonToggle1'].getState() ? 'json' : 'visual');
+                    } else {
+                        console.error(data.error);
+                        jsonViewer.setJson('{}');
+                        jsonViewer.setError(data.error);
+                    }
+                    loadingIndicator.hide();
+                    jsonViewer.show();
+                    button.disabled = false;
+                    button.innerHTML = 'Generate Script';
+                })
+                .catch(error => console.error(error));
+        }
+
+        function showHideLoadingIndicator(show, indicator) {
+            const loadingIndicator = loadingIndicators[indicator];
+            if (show) {
+                loadingIndicator.show();
+            } else {
+                loadingIndicator.hide();
+            }
+        }
+
+        function enableDisableButton(enable, buttonId, buttonText = null) {
+            const button = document.getElementById(buttonId);
+            if (enable) {
+                button.disabled = false;
+            } else {
+                button.disabled = true;
+            }
+            if (buttonText) {
+                button.innerHTML = buttonText;
+            }
+        }
+
+        function showHideAudioPlayer(show, player) {
+            const audioPlayer = audioPlayers[player];
+            if (show) {
+                audioPlayer.show();
+            } else {
+                audioPlayer.resetAudioState();
+                audioPlayer.hide();
+            }
+        }
+
+        async function generateAudio() {
+            const jsonViewer = jsonViewers['jsonViewer2'];
+            if (!jsonViewer.isValidJson()) {
+                jsonViewer.setError('Invalid JSON format');
+                return;
+            }
+
+            enableDisableButton(false, 'generateAudioButton', 'Generating...');
+            enableDisableButton(false, 'downloadAudioButton');
+            showHideLoadingIndicator(true, 'loadingIndicator2');
+            showHideAudioPlayer(false, 'audioPlayer');
+
+            try {
+                // Determine supported MIME type for Media Source Extensions
+                const supportedType = MediaSource.isTypeSupported('audio/webm; codecs="opus"')
+                    ? 'audio/webm; codecs="opus"'
+                    : MediaSource.isTypeSupported('audio/mpeg')
+                        ? 'audio/mpeg'
+                        : MediaSource.isTypeSupported('audio/mp4; codecs="mp4a.40.2"')
+                            ? 'audio/mp4; codecs="mp4a.40.2"'
+                            : null;
+
+                // Check if a supported type is found
+                if (!supportedType) {
+                    throw new Error('No supported audio MIME type found for Media Source Extensions.');
+                }
+
+                // 1. Request audio generation and get the task ID
+                const response = await fetch('/generate/audio', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversation: JSON.parse(jsonViewer.getJson()),
+                        settings: settingsComponents['settingsComponent2'].getSettings(),
+                        supportedStreamType: supportedType
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error generating audio');
+                }
+
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.error || 'Error generating audio');
+                }
+
+                const taskId = data.task_id;
+                const streamUrl = `/stream/${taskId}`;
+
+                // 2. Start streaming audio to the audio element
+                audioPlayers['audioPlayer'].setAudioSource(streamUrl, true, taskId, supportedType);
+
+                // 3. Poll for task status and update UI
+                const statusInterval = setInterval(async () => {
+                    const statusResponse = await fetch(`/task_status/${taskId}`);
+                    if (!statusResponse.ok) {
+                        clearInterval(statusInterval);
+                        console.error('Error fetching task status');
+                        return;
+                    }
+
+                    const statusData = await statusResponse.json();
+
+                    // Update UI based on status (waiting, progress, etc.)
+                    if (statusData.waiting) {
+                        // Display a waiting message or a loading spinner
+                        //statusDiv.innerText = `Status: Waiting for next audio chunk...`;
+                        console.log('Status: Waiting for next audio chunk...');
+                    } else {
+                        //statusDiv.innerText = `Status: ${statusData.status}`;
+                        console.log(`Status: ${statusData.status}`);
+                    }
+
+                    if (statusData.status === 'in_progress') {
+                        //statusDiv.innerText = `Status: In Progress`;
+                        showHideLoadingIndicator(false, 'loadingIndicator2');
+                        showHideAudioPlayer(true, 'audioPlayer');
+                    }
+
+                    // Check for completion or failure
+                    if (statusData.status === 'completed' || statusData.status.startsWith('failed')) {
+                        clearInterval(statusInterval);
+
+                        if (statusData.status === 'completed') {
+                            // Update UI for completion
+                            showHideLoadingIndicator(false, 'loadingIndicator2');
+                            showHideAudioPlayer(true, 'audioPlayer');
+                            enableDisableButton(true, 'generateAudioButton', 'Generate Audio');
+                            enableDisableButton(true, 'downloadAudioButton');
+
+                            // Add download link
+                            if (statusData.audio_url) {
+                                var downloadLink = document.createElement('a');
+                                downloadLink.href = statusData.audio_url;
+                                downloadLink.download = 'podcast-audio.mp3'; // Or use a dynamic filename
+                                downloadLink.innerText = 'Download Audio';
+                                ///statusDiv.appendChild(downloadLink);
+                                enableDisableButton(true, 'downloadAudioButton');
+                            }
+                        } else {
+                            // Handle failure
+                            console.error('Audio generation failed:', statusData.status);
+                            showHideLoadingIndicator(false, 'loadingIndicator2');
+                            showHideAudioPlayer(false, 'audioPlayer');
+                            enableDisableButton(true, 'generateAudioButton', 'Generate Audio');
+                            enableDisableButton(false, 'downloadAudioButton'); // Disable if no file
+                        }
+                    }
+                }, 1000); // Poll every second (adjust as needed)
+
+            } catch (error) {
+                console.error(error);
+                showHideLoadingIndicator(false, 'loadingIndicator2');
+                showHideAudioPlayer(false, 'audioPlayer');
+                enableDisableButton(true, 'generateAudioButton', 'Generate Audio');
+                enableDisableButton(false, 'downloadAudioButton'); // Might want to disable if no audio
+            }
+        }
+
+        // Helper function to find byte sequence in Uint8Array
+        function findBytes(haystack, needle) {
+            outer: for (let i = 0; i <= haystack.length - needle.length; i++) {
+                for (let j = 0; j < needle.length; j++) {
+                    if (haystack[i + j] !== needle[j]) continue outer;
+                }
+                return i;
+            }
+            return -1;
+        }
+
+        function downloadAudio() {
+            const audioPlayer = audioPlayers['audioPlayer'];
+            if (!audioPlayer.getAudioSource()) {
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = audioPlayer.getAudioSource();
+            link.download = 'podcast.wav';
+            link.click();
+        }
+
+        function addListeners() {
+            // Panel Navigation
+            document.querySelectorAll('[data-nav]').forEach(navItem => {
+                navItem.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    selectPanel(navItem.getAttribute('data-nav'));
+                });
+            });
+            document.getElementById('generateScriptButton').addEventListener('click', () => {
+                generateScript();
+            });
+            document.getElementById('proceedToGeneratePodcastButton').addEventListener('click', () => {
+                selectPanel('generate-podcast');
+                const jsonViewer1 = jsonViewers['jsonViewer1'];
+                const jsonViewer2 = jsonViewers['jsonViewer2'];
+                jsonViewer2.setJson(jsonViewer1.getJson());
+                jsonViewer2.switchMode(togglebuttons['jsonToggle2'].getState() ? 'json' : 'visual');
+                jsonViewer2.show();
+            });
+            document.getElementById('generateAudioButton').addEventListener('click', () => {
+                generateAudio();
+            });
+            document.getElementById('downloadAudioButton').addEventListener('click', () => {
+                downloadAudio();
+            });
+            document.getElementById('openSettings1').addEventListener('click', () => {
+                settingsComponents['settingsComponent1'].show();
+            });
+            document.getElementById('openSettings2').addEventListener('click', () => {
+                settingsComponents['settingsComponent2'].show();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPanels();
+            renderToggleButtons();
+            renderJsonViewers();
+            renderLoadingIndicators();
+            renderAudioPlayers();
+            if (!audioPlayers['audioPlayer']) {
+                console.error('audioPlayer is not initialized.');
+            }
+            renderSettingsComponents();
+            addListeners();
+            selectPanel('generate-script');
+            // Load the topic from the cookie on page load
+            const savedTopic = getCookie('topic');
+            if (savedTopic) {
+                document.getElementById('topic').value = savedTopic;
+            }
+            document.getElementById('topic').focus();
+        });
+
+    </script>
+</body>

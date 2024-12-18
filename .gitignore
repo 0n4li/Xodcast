@@ -1,0 +1,6 @@
+.env
+__pycache__
+cache
+*-service.json
+test*.py
+test-*.json
