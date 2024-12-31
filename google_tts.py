@@ -310,19 +310,22 @@ multi_speaker_voices = {
 class OutputFormat(Enum):
     WAV = "wav"
     MP3 = "mp3"
+    OGG = "ogg"
 
-    def get_encoding(format):
+    def get_encoding(self, format):
         return {
             OutputFormat.WAV: wav_encoding,
             OutputFormat.MP3: mp3_encoding,
+            OutputFormat.OGG: ogg_encoding,
         }[format]
 
 
+ogg_encoding = texttospeech.AudioEncoding.OGG_OPUS
 wav_encoding = texttospeech.AudioEncoding.LINEAR16
 mp3_encoding = texttospeech.AudioEncoding.MP3
 
-sample_rate_hertz = 24000
-channel_count = 1
+sample_rate_hertz = 48000
+channel_count = 2
 bitrate = "192k"
 codec = "libmp3lame"
 
@@ -407,6 +410,8 @@ def combine_audio_files(
                 codec,
             ],
         )
+    elif format == OutputFormat.OGG:
+        combined.export(output_file, format="ogg", codec="libopus")
     else:
         combined.export(
             output_file,
@@ -475,7 +480,9 @@ def get_supported_stream(
             params.extend(["-dash", webm_params["dash"]])
 
         # Export with WebM header (if first chunk) or without (subsequent chunks)
-        segment.export(stream, format="webm", codec="libopus", parameters=params)
+        segment.export(stream, format="webm", codec="opus", parameters=params)
+    elif supported_stream_type == "audio/ogg":
+        segment.export(stream, format="ogg", codec="libopus")
     elif supported_stream_type == "audio/mpeg":
         segment.export(stream, format="mpeg")
     elif supported_stream_type == 'audio/mp4; codecs="mp4a.40.2"':

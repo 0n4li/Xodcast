@@ -95,11 +95,7 @@ def generate_audio():
         conversation_json = request.json["conversation"]
         settings = request.json.get("settings", {})
         supported_stream_type = request.json.get("supportedStreamType", "audio/mpeg")
-        output_format = (
-            OutputFormat.MP3
-            if (request.json.get("outputFormat", "mp3") == "mp3")
-            else OutputFormat.WAV
-        )
+        output_format = OutputFormat(settings.get("outputFormat", "wav"))
 
         # Generate a unique task ID
         task_id = str(uuid.uuid4())

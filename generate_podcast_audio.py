@@ -103,7 +103,7 @@ def generate_podcast_audio(json_file, settings={}, format=OutputFormat.WAV):
     )
 
     # Generate audio from chunks using google_tts
-    audio_data = generate_audio_from_chunks(chunks, multi_speaker, format)
+    audio_data = generate_audio_from_chunks(chunks, multi_speaker, format=format)
 
     yield from audio_data
 
