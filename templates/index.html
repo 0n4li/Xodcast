@@ -35,11 +35,12 @@
             </h2>
             <nav>
                 <a href="#"
-                    class="block py-2 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg mb-2 bg-blue-50 text-blue-600 active-nav-item"
+                    class="block py-2 px-4 text-gray-700 disabled:bg-gray-300 disabled:text-gray-400 hover:bg-blue-50 hover:text-blue-600 rounded-lg mb-2 bg-blue-50 text-blue-600 active-nav-item"
                     data-nav="generate-script">
                     Generate Script
                 </a>
-                <a href="#" class="block py-2 px-4 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg mb-2"
+                <a href="#"
+                    class="block py-2 px-4 text-gray-700 disabled:bg-gray-300 disabled:text-gray-400 hover:bg-blue-50 hover:text-blue-600 rounded-lg mb-2"
                     data-nav="generate-podcast">
                     Generate Podcast
                 </a>
@@ -72,7 +73,7 @@ Or you may paste your entire content here"></textarea>
                     <div data-slot="footer">
                         <div class="flex items-center justify-between">
                             <button id="generateScriptButton"
-                                class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors text-lg">
+                                class="w-full bg-blue-600 disabled:bg-gray-300 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors text-lg">
                                 Generate Script
                             </button>
                             <button id="openSettings1"
@@ -97,7 +98,7 @@ Or you may paste your entire content here"></textarea>
                     </div>
                     <div data-slot="footer">
                         <button id="proceedToGeneratePodcastButton"
-                            class="w-full bg-red-600 text-white py-3 px-4 rounded-md hover:bg-red-700 transition-colors text-lg">
+                            class="w-full bg-red-600 disabled:bg-gray-300 text-white py-3 px-4 rounded-md hover:bg-red-700 transition-colors text-lg">
                             Proceed to Generate Podcast
                         </button>
                     </div>
@@ -115,7 +116,7 @@ Or you may paste your entire content here"></textarea>
                     <div data-slot="footer">
                         <div class="flex items-center justify-between">
                             <button id="generateAudioButton"
-                                class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors text-lg">
+                                class="w-full bg-blue-600 disabled:bg-gray-300 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors text-lg">
                                 Generate Audio
                             </button>
                             <button id="openSettings2"
@@ -140,7 +141,7 @@ Or you may paste your entire content here"></textarea>
                     </div>
                     <div data-slot="footer">
                         <button id="downloadAudioButton" disabled
-                            class="w-full bg-gray-500 text-white py-3 px-4 rounded-md transition-colors text-lg">
+                            class="w-full bg-red-600 disabled:bg-gray-300 text-white py-3 px-4 rounded-md hover:bg-red-700 transition-colors text-lg" data-download-audio="null">
                             Download Audio
                         </button>
                     </div>
@@ -239,8 +240,11 @@ Or you may paste your entire content here"></textarea>
                         }, defaultValue: {
                             hostVoice: 'en-US-Studio-MultiSpeaker-R',
                             guestVoice: 'en-US-Studio-MultiSpeaker-S',
-                        }
+                        },
                     },
+                    {
+                        id: 'outputFormat', type: 'select', label: 'Output Format', options: [{ value: 'mp3', text: 'MP3' }, { value: 'wav', text: 'WAV' }, { value: 'ogg', text: 'OGG' }], defaultValue: 'wav',
+                    }
                 ]
             },
         };
@@ -381,11 +385,9 @@ Or you may paste your entire content here"></textarea>
                 alert("Cookies are disabled. Please enable cookies to save the topic.");
                 return;
             }
-            const button = document.getElementById('generateScriptButton');
-            button.disabled = true;
-            button.innerHTML = 'Generating...';
-            const loadingIndicator = loadingIndicators['loadingIndicator1'];
-            loadingIndicator.show();
+            enableDisableButton(false, 'generateScriptButton', 'Generating...');
+            enableDisableButton(false, 'proceedToGeneratePodcastButton', 'Waiting...');
+            showHideLoadingIndicator(true, 'loadingIndicator1');
             const jsonViewer = jsonViewers['jsonViewer1'];
             jsonViewer.clear();
             jsonViewer.hide();
@@ -411,10 +413,10 @@ Or you may paste your entire content here"></textarea>
                         jsonViewer.setJson('{}');
                         jsonViewer.setError(data.error);
                     }
-                    loadingIndicator.hide();
+                    showHideLoadingIndicator(false, 'loadingIndicator1');
+                    enableDisableButton(true, 'generateScriptButton', 'Generate Script');
+                    enableDisableButton(true, 'proceedToGeneratePodcastButton', 'Proceed to Generate Podcast');                
                     jsonViewer.show();
-                    button.disabled = false;
-                    button.innerHTML = 'Generate Script';
                 })
                 .catch(error => console.error(error));
         }
@@ -440,6 +442,17 @@ Or you may paste your entire content here"></textarea>
             }
         }
 
+        function enableDisableDownloadButton(enable, buttonId, downloadUrl) {
+            const button = document.getElementById(buttonId);
+            if (enable) {
+                button.disabled = false;
+                button.setAttribute('data-download-audio', downloadUrl);
+            } else {
+                button.disabled = true;
+                button.setAttribute('data-download-audio', null);
+            }
+        }
+
         function showHideAudioPlayer(show, player) {
             const audioPlayer = audioPlayers[player];
             if (show) {
@@ -450,6 +463,11 @@ Or you may paste your entire content here"></textarea>
             }
         }
 
+        function updateAudioPlayerStreamingStatus(status, player) {
+            const audioPlayer = audioPlayers[player];
+            audioPlayer.updateStreamingStatus(status);
+        }
+
         async function generateAudio() {
             const jsonViewer = jsonViewers['jsonViewer2'];
             if (!jsonViewer.isValidJson()) {
@@ -458,7 +476,7 @@ Or you may paste your entire content here"></textarea>
             }
 
             enableDisableButton(false, 'generateAudioButton', 'Generating...');
-            enableDisableButton(false, 'downloadAudioButton');
+            enableDisableDownloadButton(false, 'downloadAudioButton');
             showHideLoadingIndicator(true, 'loadingIndicator2');
             showHideAudioPlayer(false, 'audioPlayer');
 
@@ -532,6 +550,8 @@ Or you may paste your entire content here"></textarea>
                         showHideAudioPlayer(true, 'audioPlayer');
                     }
 
+                    updateAudioPlayerStreamingStatus(statusData.status, 'audioPlayer');
+
                     // Check for completion or failure
                     if (statusData.status === 'completed' || statusData.status.startsWith('failed')) {
                         clearInterval(statusInterval);
@@ -541,16 +561,9 @@ Or you may paste your entire content here"></textarea>
                             showHideLoadingIndicator(false, 'loadingIndicator2');
                             showHideAudioPlayer(true, 'audioPlayer');
                             enableDisableButton(true, 'generateAudioButton', 'Generate Audio');
-                            enableDisableButton(true, 'downloadAudioButton');
-
                             // Add download link
                             if (statusData.audio_url) {
-                                var downloadLink = document.createElement('a');
-                                downloadLink.href = statusData.audio_url;
-                                downloadLink.download = 'podcast-audio.mp3'; // Or use a dynamic filename
-                                downloadLink.innerText = 'Download Audio';
-                                ///statusDiv.appendChild(downloadLink);
-                                enableDisableButton(true, 'downloadAudioButton');
+                                enableDisableDownloadButton(true, 'downloadAudioButton', statusData.audio_url);
                             }
                         } else {
                             // Handle failure
@@ -558,7 +571,7 @@ Or you may paste your entire content here"></textarea>
                             showHideLoadingIndicator(false, 'loadingIndicator2');
                             showHideAudioPlayer(false, 'audioPlayer');
                             enableDisableButton(true, 'generateAudioButton', 'Generate Audio');
-                            enableDisableButton(false, 'downloadAudioButton'); // Disable if no file
+                            enableDisableDownloadButton(false, 'downloadAudioButton'); // Disable if no file
                         }
                     }
                 }, 1000); // Poll every second (adjust as needed)
@@ -583,14 +596,18 @@ Or you may paste your entire content here"></textarea>
             return -1;
         }
 
-        function downloadAudio() {
-            const audioPlayer = audioPlayers['audioPlayer'];
-            if (!audioPlayer.getAudioSource()) {
+        function downloadAudio(buttonId) {
+            let downloadUrl = document.getElementById(buttonId).getAttribute('data-download-audio');
+            if (!downloadUrl || downloadUrl === 'null') {
                 return;
             }
+            const url = new URL(downloadUrl, window.location.origin);
+            const pathname = url.pathname;
+            const filename = pathname.substring(pathname.lastIndexOf('/') + 1);
+            const extension = filename.substring(filename.lastIndexOf('.') + 1);
             const link = document.createElement('a');
-            link.href = audioPlayer.getAudioSource();
-            link.download = 'podcast.wav';
+            link.href = url.href;
+            link.download = `podcast_audio.${extension}`;
             link.click();
         }
 
@@ -617,7 +634,7 @@ Or you may paste your entire content here"></textarea>
                 generateAudio();
             });
             document.getElementById('downloadAudioButton').addEventListener('click', () => {
-                downloadAudio();
+                downloadAudio('downloadAudioButton');
             });
             document.getElementById('openSettings1').addEventListener('click', () => {
                 settingsComponents['settingsComponent1'].show();
