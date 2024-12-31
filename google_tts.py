@@ -1,6 +1,7 @@
 from io import BytesIO
 from google.cloud import texttospeech
 from pydub import AudioSegment
+from enum import Enum
 
 locales = {
     "de-DE": "German (Germany)",
@@ -306,7 +307,7 @@ multi_speaker_voices = {
 }
 
 
-class OutputFormat:
+class OutputFormat(Enum):
     WAV = "wav"
     MP3 = "mp3"
 
@@ -320,6 +321,11 @@ class OutputFormat:
 wav_encoding = texttospeech.AudioEncoding.LINEAR16
 mp3_encoding = texttospeech.AudioEncoding.MP3
 
+sample_rate_hertz = 24000
+channel_count = 1
+bitrate = "192k"
+codec = "libmp3lame"
+
 
 def synthesize_input(synthesis_input, voice_params, format=OutputFormat.WAV):
     """Synthesize a single chunk of conversation and yield audio content."""
@@ -327,7 +333,7 @@ def synthesize_input(synthesis_input, voice_params, format=OutputFormat.WAV):
 
     audio_config = texttospeech.AudioConfig(
         audio_encoding=OutputFormat.get_encoding(format),
-        sample_rate_hertz=24000,
+        sample_rate_hertz=sample_rate_hertz,
         speaking_rate=1.0,
         pitch=0.0,
         volume_gain_db=0.0,
@@ -367,24 +373,55 @@ def synthesize_multi_speaker_chunk(chunk, voice_params, format=OutputFormat.WAV)
     synthesis_input = texttospeech.SynthesisInput(
         multi_speaker_markup=multi_speaker_markup
     )
-
     for audio_content in synthesize_input(synthesis_input, voice_params, format):
         yield audio_content
 
 
-def combine_audio_files(audio_files, output_file, format=OutputFormat.WAV):
+def combine_audio_files(
+    audio_files,
+    output_file,
+    format=OutputFormat.WAV,
+    sample_rate=sample_rate_hertz,
+    channel_count=channel_count,
+    bitrate=bitrate,
+    codec=codec,
+):
     """Combine multiple audio files into a single file."""
     combined = AudioSegment.empty()
     for audio_file in audio_files:
-        segment = AudioSegment.from_file(audio_file, format=format)
+        segment = AudioSegment.from_file(audio_file)
         combined += segment
 
-    combined.export(output_file, format=format)
+    if format == OutputFormat.MP3:
+        combined.export(
+            output_file,
+            format="mp3",
+            parameters=[
+                "-ar",
+                str(sample_rate),
+                "-ac",
+                str(channel_count),
+                "-b:a",
+                bitrate,
+                "-codec:a",
+                codec,
+            ],
+        )
+    else:
+        combined.export(
+            output_file,
+            format="wav",
+            parameters=[
+                "-ar",
+                str(sample_rate),
+                "-ac",
+                str(channel_count),
+            ],
+        )
 
 
 def get_supported_stream(
     audio_file_path,
-    format=OutputFormat.WAV,
     supported_stream_type='audio/webm; codecs="opus"',
     is_first_chunk=False,
     webm_params=None,
@@ -422,7 +459,7 @@ def get_supported_stream(
         bytes: The audio content of the file in the specified format.
     """
     with open(audio_file_path, "rb") as f:
-        segment = AudioSegment.from_file(f, format=format)
+        segment = AudioSegment.from_file(f)
 
     stream = BytesIO()
 
