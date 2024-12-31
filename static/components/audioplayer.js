@@ -20,6 +20,8 @@ class AudioPlayer {
         this.playPauseButton = null;
         this.currentTimeDisplay = null;
         this.durationDisplay = null;
+        this.loading = null;
+        this.alert = null;
         this.autoPlay = this.options.autoPlay;
 
         this.mediaSource = null;
@@ -51,10 +53,12 @@ class AudioPlayer {
         }
 
         if (this.options.showTime) {
-            const { timeHolder, currentTimeDisplay, durationDisplay } = this.createTimeDisplay();
+            const { timeHolder, currentTimeDisplay, durationDisplay, loading, alert } = this.createTimeDisplay();
             this.timeHolder = timeHolder;
             this.currentTimeDisplay = currentTimeDisplay;
             this.durationDisplay = durationDisplay;
+            this.loading = loading;
+            this.alert = alert;
             fragment.appendChild(this.timeHolder);
         }
 
@@ -93,9 +97,19 @@ class AudioPlayer {
         durationDisplay.textContent = '0:00';
 
         timeHolder.appendChild(currentTimeDisplay);
-        timeHolder.appendChild(durationDisplay);
 
-        return { timeHolder, currentTimeDisplay, durationDisplay };
+        const holder = document.createElement('span');
+        const loading = document.createElement('div');
+        loading.className = 'loading animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 inline-block mx-2 hidden';
+        const alert = document.createElement('span');
+        alert.className = 'text-red-500 mx-2 hidden';
+        alert.textContent = '⚠';
+        holder.appendChild(loading);
+        holder.appendChild(alert);
+        holder.appendChild(durationDisplay);
+        timeHolder.appendChild(holder);
+    
+        return { timeHolder, currentTimeDisplay, durationDisplay, loading, alert };
     }
 
     createPlayPauseButton() {
@@ -352,6 +366,19 @@ class AudioPlayer {
         }
     }
 
+    updateStreamingStatus= (status) => {
+        if (status === 'completed') {
+            this.loading.classList.add('hidden');
+            this.alert.classList.add('hidden');
+        } else if (status.startsWith('failed')) {
+            this.loading.classList.add('hidden');
+            this.alert.classList.remove('hidden');
+        } else {
+            this.loading.classList.remove('hidden');
+            this.alert.classList.add('hidden');
+        }
+    }
+
     updateDurationDisplay() {
         if (!this.durationDisplay) return;
 
@@ -412,6 +439,12 @@ class AudioPlayer {
         }
         if (this.currentTimeDisplay) {
             this.currentTimeDisplay.textContent = '0:00';
+        }
+        if (this.loading) {
+            this.loading.classList.add('hidden');
+        }
+        if (this.alert) {
+            this.alert.classList.add('hidden');
         }
         this.playPauseButton.disabled = true;
         this.lastChunkEndTime = 0;
