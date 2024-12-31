@@ -4,3 +4,4 @@ cache
 *-service.json
 test*.py
 test-*.json
+static/output/*
