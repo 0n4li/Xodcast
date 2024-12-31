@@ -17,7 +17,7 @@ Xodcast is a web application that leverages AI to generate podcasts from user-pr
 1. **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/your-username/xodcast.git
+    git clone https://github.com/0n4li/Xodcast.git
     cd xodcast
     ```
 
