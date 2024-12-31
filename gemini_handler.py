@@ -133,6 +133,7 @@ def get_cached_response(topic, settings):
     cache_file = CACHE_DIR / f"{cache_key}.json"
 
     if not cache_file.exists():
+        print("Cache file does not exist")
         return None
 
     try:
@@ -142,17 +143,20 @@ def get_cached_response(topic, settings):
         # Check if cache is expired
         cache_time = datetime.fromisoformat(cached_data.get("timestamp", 0))
         if datetime.now() - cache_time > CACHE_DURATION:
+            print("Cache is expired")
             return None
 
-        # Check if cache is within the time limit
-        if datetime.now() - cache_time > CACHE_TIME_LIMIT:
-            return None
-
-        # Check if settings match
-        if cached_data.get("settings") != settings:
-            return None
-
-        return cached_data["response"]
+        # Check if cache usage is enabled in settings
+        if settings.get("useCache", True):
+            # Check if cache is within the time limit specified in settings
+            cache_time_limit = timedelta(minutes=int(settings.get("cacheTimeLimit", 5)))
+            if datetime.now() - cache_time <= cache_time_limit:
+                # Check if other settings match
+                print("Cache is within time limit")
+                if cached_data.get("settings") == settings:
+                    return cached_data["response"]
+                print("Cache settings do not match")
+        return None
     except Exception as e:
         print(f"Error reading cache: {e}")
         return None
