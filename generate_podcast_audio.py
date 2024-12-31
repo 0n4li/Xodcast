@@ -80,8 +80,12 @@ def generate_podcast_audio(json_file, settings={}, format=OutputFormat.WAV):
     conversation = load_conversation(json_file)
 
     # Speaker settings
-    host_voice = settings.get("hostVoice", "en-US-Studio-Q")
-    guest_voice = settings.get("guestVoice", "en-US-Studio-O")
+    voice_selector = settings.get(
+        "voiceSelector",
+        {"hostVoice": default_host_voice, "guestVoice": default_guest_voice},
+    )
+    host_voice = voice_selector.get("hostVoice", default_host_voice)
+    guest_voice = voice_selector.get("guestVoice", default_guest_voice)
     multi_speaker = "MultiSpeaker" in host_voice or "MultiSpeaker" in guest_voice
 
     if "MultiSpeaker" in host_voice and "MultiSpeaker" not in guest_voice:
