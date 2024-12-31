@@ -5,8 +5,14 @@ JSON_FORMAT = """
     "host_name": "Name of the host",
     "guest_name": "Name of the guest",
     "conversation": [
-        {"speaker": "Host", "text": "spoken text"},
-        {"speaker": "Guest", "text": "spoken text"}
+        {
+            "speaker": "Host",
+            "text": "spoken text"
+        },
+        {
+            "speaker": "Guest",
+            "text": "spoken text"
+        }
     ]
 }
 """
@@ -49,21 +55,21 @@ DEBATE_CONVERSATION_RULES = """
 
 # Rules for different conversation lengths
 SHORT_CONVERSATION_RULES = """
-- The conversation should be short and quick
-- Focus on the most important points
-- Keep the conversation under 5 minutes
+- Short and concise conversation, approximately 750-1000 words.
+- Focus on the most important points, covering only the essential aspects of the topic.
+- Keep the conversation brief and to the point.
 """
 
 MEDIUM_CONVERSATION_RULES = """
-- The conversation should be medium in length
-- Focus on a balanced mix of topics and exchanges
-- Keep the conversation between 5 and 10 minutes
+- Moderately detailed conversation, approximately 1500-2000 words.
+- Focus on a balanced mix of topics and exchanges, providing a good overview of the subject matter.
+- Explore the topic in some depth, but without getting overly detailed.
 """
 
 LONG_CONVERSATION_RULES = """
-- The conversation should be long and detailed
-- Focus on a deep and in-depth exploration of the topic along with related topics
-- Keep the conversation over 10 minutes
+- Highly detailed and in-depth conversation, approximately 2500-3000 words.
+- Focus on a deep and comprehensive exploration of the topic, covering multiple aspects and related subjects.
+- Provide thorough explanations and insights, leaving no stone unturned.
 """
 
 # Rules for different emotion levels
@@ -165,13 +171,17 @@ MEDIUM_EMOTIONALITY_RULES = """
 - There should be some emphasis on emotion in the speech.
 - You can use words or phrases to express emotion based on below:
     ```{EMOTIONS}```
-"""
+""".format(
+    EMOTIONS=EMOTIONS
+)
 
 HIGH_EMOTIONALITY_RULES = """
 - There should be a lot of emphasis on emotion in the speech.
 - You can use words or phrases to express emotion based on below:
     ```{EMOTIONS}```
-"""
+""".format(
+    EMOTIONS=EMOTIONS
+)
 
 # Rules for use of stutter
 LOW_STUTTER_RULES = """
@@ -241,17 +251,12 @@ Follow these rules:
 
 # Error Correction Prompt
 ERROR_CORRECTION_PROMPT = """
-Your previous response did not match the required JSON structure.
-Please format your response EXACTLY as shown below, with no additional text or formatting:
+There was an error in your response:
+```
+{error}
+```
+Please format your response EXACTLY as shown below, with no additional text:
     ```{json_format}```
-
-Previous error: {error}
-
-Remember:
-1. Use ONLY "Host" or "Guest" as speaker values
-2. Include all required fields
-3. Return ONLY the JSON object
-4. Use proper JSON formatting with double quotes
 """
 
 # Mapping
