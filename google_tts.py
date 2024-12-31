@@ -312,7 +312,7 @@ class OutputFormat(Enum):
     MP3 = "mp3"
     OGG = "ogg"
 
-    def get_encoding(self, format):
+    def get_encoding(format):
         return {
             OutputFormat.WAV: wav_encoding,
             OutputFormat.MP3: mp3_encoding,
@@ -335,7 +335,7 @@ def synthesize_input(synthesis_input, voice_params, format=OutputFormat.WAV):
     client = texttospeech.TextToSpeechClient()
 
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=OutputFormat.get_encoding(format),
+        audio_encoding=OutputFormat.get_encoding(format=format),
         sample_rate_hertz=sample_rate_hertz,
         speaking_rate=1.0,
         pitch=0.0,
@@ -480,7 +480,7 @@ def get_supported_stream(
             params.extend(["-dash", webm_params["dash"]])
 
         # Export with WebM header (if first chunk) or without (subsequent chunks)
-        segment.export(stream, format="webm", codec="opus", parameters=params)
+        segment.export(stream, format="webm", codec="libopus", parameters=params)
     elif supported_stream_type == "audio/ogg":
         segment.export(stream, format="ogg", codec="libopus")
     elif supported_stream_type == "audio/mpeg":
