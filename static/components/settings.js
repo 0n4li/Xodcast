@@ -165,6 +165,8 @@ class SettingsComponent {
         // Append the fields container to the form
         form.appendChild(fieldsContainer);
 
+        this.container.appendChild(form);
+
         // Call onRender for custom fields after the form is added to the container
         this.options.config.fields.forEach(field => {
             if (field.type === 'custom' && typeof field.onRender === 'function') {
@@ -174,8 +176,6 @@ class SettingsComponent {
                 }
             }
         });
-
-        this.container.appendChild(form);
     }
 
     getSettings() {
