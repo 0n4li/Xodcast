@@ -9,17 +9,26 @@ class VoiceSelector {
             ...options
         };
 
-        this.container = document.getElementById(this.options.id);  
         this.hostVoice = this.options.defaultHostVoice;
         this.guestVoice = this.options.defaultGuestVoice;
         this.audioPlayer = null;
+        this.container = null;
 
         // Assume multiSpeakerVoices is available globally (you might need to adjust this)
         this.voices = this.options.voices;
+        this.changeListeners = [];
     }
 
+    addChangeListener(listener) {
+        this.changeListeners.push(listener);
+    }
     render() {
-        console.log("Rending Voice Selector");
+        this.container = document.getElementById(this.options.id);
+        if (!this.container) {
+            console.error("Container element not found:", this.options.id);
+            return; // Exit if container is not found
+        }
+        console.log("Rendering Voice Selector");
         this.container.innerHTML = '';
 
         const title = document.createElement('h3');
@@ -84,6 +93,9 @@ class VoiceSelector {
                 }
                 this.render();
                 this.updateAudioPlayer();
+
+                // Notify change listeners
+                this.changeListeners.forEach(listener => listener());
             });
 
             // Disable button if the voice is selected for the other type
@@ -145,5 +157,19 @@ class VoiceSelector {
             color += ('00' + value.toString(16)).substr(-2);
         }
         return color;
+    }
+
+    setVoices(hostVoice, guestVoice) {
+        this.hostVoice = hostVoice;
+        this.guestVoice = guestVoice;
+        this.render();
+        this.updateAudioPlayer();
+    }
+
+    getSelectedVoices() {
+        return {
+            hostVoice: this.hostVoice,
+            guestVoice: this.guestVoice
+        };
     }
 }

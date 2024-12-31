@@ -208,26 +208,37 @@ Or you may paste your entire content here"></textarea>
                     { id: 'hostGender', type: 'select', label: 'Host Gender', options: [{ value: 'male', text: 'Male' }, { value: 'female', text: 'Female' }], defaultValue: 'male' },
                     { id: 'guestName', type: 'text', label: 'Guest Name', defaultValue: 'Bob Smith' },
                     { id: 'guestGender', type: 'select', label: 'Guest Gender', options: [{ value: 'male', text: 'Male' }, { value: 'female', text: 'Female' }], defaultValue: 'female' },
-                    { id: 'podcastName', type: 'text', label: 'Podcast Name', defaultValue: 'XODCast' },
+                    { id: 'podcastName', type: 'text', label: 'Podcast Name', defaultValue: 'Xodcast' },
                     { id: 'conversationType', type: 'select', label: 'Conversation Type', options: [{ value: 'casual', text: 'Casual' }, { value: 'formal', text: 'Formal' }, { value: 'in-depth', text: 'In-depth' }, { value: 'satirical', text: 'Satirical' }], defaultValue: 'casual' },
                     { id: 'conversationMode', type: 'select', label: 'Conversation Mode', options: [{ value: 'qna', text: 'Question and Answer' }, { value: 'discussion', text: 'Discussion' }, { value: 'debate', text: 'Debate' }], defaultValue: 'qna' },
                     { id: 'conversationLength', type: 'range', label: 'Conversation Length', min: 1, max: 3, defaultValue: 2 },
                     { id: 'emotionSlider', type: 'range', label: 'Emotion', min: 1, max: 3, defaultValue: 2 },
                     { id: 'stutterSlider', type: 'range', label: 'Stutter/Repetition', min: 1, max: 3, defaultValue: 2 },
+                    { id: 'useCache', type: 'checkbox', label: 'Use Cache', defaultValue: true },
+                    { id: 'cacheTimeLimit', type: 'number', label: 'Cache Time Limit (minutes)', min: 1, max: 9999, defaultValue: 5 },
                 ],
             },
             forPodcast: {
                 fields: [
                     {
-                        id: 'voiceSelector', type: 'custom', label: 'Voice Selector', tag: 'div', attributes: { id: 'voiceSelector', class: "voice-selector" }, onRender: (element, component) => {
+                        id: 'voiceSelector', type: 'custom', label: 'Voice Selector', tag: 'div', attributes: { id: 'voiceSelector', class: "voice-selector" }, onRender: (element, component, defaultValue) => {
                             voiceSelector = new VoiceSelector({
-                                id: 'voiceSelector',
+                                id: element.id,
                                 voices: multiSpeakerVoices,
-                                defaultHostVoice: 'en-US-Studio-MultiSpeaker-R',
-                                defaultGuestVoice: 'en-US-Studio-MultiSpeaker-S',
+                                defaultHostVoice: defaultValue.hostVoice || 'en-US-Studio-MultiSpeaker-R',
+                                defaultGuestVoice: defaultValue.guestVoice || 'en-US-Studio-MultiSpeaker-S',
                                 soundsPath: 'static/sounds/',
                             });
                             voiceSelector.render();
+                            // Add a change listener to update settings when voices are changed
+                            voiceSelector.addChangeListener(() => {
+                                console.log('Voices changed');
+                                const selectedVoices = voiceSelector.getSelectedVoices();
+                                component.settings.voiceSelector = selectedVoices;
+                            });
+                        }, defaultValue: {
+                            hostVoice: 'en-US-Studio-MultiSpeaker-R',
+                            guestVoice: 'en-US-Studio-MultiSpeaker-S',
                         }
                     },
                 ]
@@ -323,7 +334,15 @@ Or you may paste your entire content here"></textarea>
             document.querySelectorAll('[data-settings-component]').forEach(settingsComponent => {
                 let settingsComponentId = settingsComponent.getAttribute('id');
                 let config = settingsConfig[settingsComponent.getAttribute('data-settings-component')];
-                let settingsComponentObj = new SettingsComponent({ id: settingsComponentId, config: config });
+                let settingsComponentObj = new SettingsComponent({ id: settingsComponentId, config: config, onClose: (settings) => {
+                    // Save the settings to cookies when the settings component is closed
+                    if (settingsComponentId === 'settingsComponent1') {
+                        setCookie('settings', JSON.stringify(settings), 999); // Expires in 7 days
+                    } else if (settingsComponentId === 'settingsComponent2') {
+                        const selectedVoices = voiceSelector.getSelectedVoices();
+                        setCookie('voices', JSON.stringify(selectedVoices), 999); // Expires in 7 days
+                    }
+                } });
                 settingsComponentObj.render();
                 settingsComponents[settingsComponentId] = settingsComponentObj;
             });
@@ -338,7 +357,7 @@ Or you may paste your entire content here"></textarea>
                 expires = "; expires=" + date.toUTCString();
             }
             const encodedValue = encodeURIComponent(value);
-            document.cookie = name + "=" + encodedValue + expires + "; path=/";
+            document.cookie = name + "=" + encodedValue + expires + "; path=/; SameSite=Lax";
         }
 
         // Function to get a cookie
@@ -373,12 +392,13 @@ Or you may paste your entire content here"></textarea>
             const topicValue = document.getElementById('topic').value;
             // Save the topic to a cookie
             setCookie('topic', topicValue, 7); // Expires in 7 days
+            const settings = settingsComponents['settingsComponent1'].getSettings();
             fetch('/generate/script', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ topic: topicValue, settings: settingsComponents['settingsComponent1'].getSettings() })
+                body: JSON.stringify({ topic: topicValue, settings: settings })
             })
                 .then(response => response.json())
                 .then(data => {
@@ -607,6 +627,25 @@ Or you may paste your entire content here"></textarea>
             });
         }
 
+        function loadSettingsFromCookies() {
+            // Load the topic from the cookie on page load
+            const savedTopic = getCookie('topic');
+            if (savedTopic) {
+                document.getElementById('topic').value = savedTopic;
+            }
+            // Load the settings from the cookie on page load
+            const savedSettings = getCookie('settings');
+            if (savedSettings) {
+                settingsComponents['settingsComponent1'].setSettings(JSON.parse(savedSettings));
+            }
+            // Load the voices from the cookie on page load
+            const savedVoices = getCookie('voices');
+            if (savedVoices) {
+                const parsedVoices = JSON.parse(savedVoices);
+                voiceSelector.setVoices(parsedVoices.hostVoice, parsedVoices.guestVoice);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             renderPanels();
             renderToggleButtons();
@@ -619,13 +658,10 @@ Or you may paste your entire content here"></textarea>
             renderSettingsComponents();
             addListeners();
             selectPanel('generate-script');
-            // Load the topic from the cookie on page load
-            const savedTopic = getCookie('topic');
-            if (savedTopic) {
-                document.getElementById('topic').value = savedTopic;
-            }
+            loadSettingsFromCookies();
             document.getElementById('topic').focus();
         });
 
     </script>
 </body>
+</html>
