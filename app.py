@@ -35,6 +35,9 @@ audio_tasks = {}
 # Configuration for cleanup
 TASK_EXPIRATION_SECONDS = 3600  # 1 hour (adjust as needed)
 
+# Sentinel object to signal the end of the audio stream
+END_OF_STREAM_SENTINEL = object()
+
 
 def cleanup_old_tasks():
     """Periodically removes old tasks from audio_tasks."""
@@ -92,6 +95,11 @@ def generate_audio():
         conversation_json = request.json["conversation"]
         settings = request.json.get("settings", {})
         supported_stream_type = request.json.get("supportedStreamType", "audio/mpeg")
+        output_format = (
+            OutputFormat.MP3
+            if (request.json.get("outputFormat", "mp3") == "mp3")
+            else OutputFormat.WAV
+        )
 
         # Generate a unique task ID
         task_id = str(uuid.uuid4())
@@ -103,7 +111,7 @@ def generate_audio():
         os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
         # Generate the output file path
-        unique_filename = f"podcast-{task_id}.mp3"
+        unique_filename = f"podcast-{task_id}.{output_format.value}"
         output_file_path = os.path.join(OUTPUT_FOLDER, unique_filename)
 
         # Store task information
@@ -112,7 +120,8 @@ def generate_audio():
             "status": "pending",
             "metadata": {},  # You can add initial metadata here if needed
             "waiting": False,
-            "file_path": output_file_path,  # Add file path
+            "file_path": output_file_path,
+            "output_format": output_format,
             "timestamp": time.time(),  # Add timestamp
         }
 
@@ -145,6 +154,7 @@ def generate_audio_task(
     temp_json_fd, temp_json_path = tempfile.mkstemp(suffix=".json")
     temp_dir = tempfile.mkdtemp()
     audio_files = []  # List to store temporary audio chunk file paths
+    output_format = audio_tasks[task_id]["output_format"]
 
     try:
         with os.fdopen(temp_json_fd, "w") as temp_json_file:
@@ -152,31 +162,34 @@ def generate_audio_task(
 
         for i, chunk in enumerate(
             generate_podcast_audio(
-                temp_json_path, settings=settings, format=OutputFormat.MP3
+                temp_json_path, settings=settings, format=output_format
             )
         ):
-            temp_audio_file = os.path.join(temp_dir, f"chunk_{i}.mp3")
+            temp_audio_file = os.path.join(temp_dir, f"chunk_{i}.{output_format.value}")
             with open(temp_audio_file, "wb") as f:
                 f.write(chunk)
             audio_files.append(temp_audio_file)  # Add file path to the list
             supported_type_chunk = get_supported_stream(
                 temp_audio_file,
-                format=OutputFormat.MP3,
                 supported_stream_type=supported_stream_type,
                 is_first_chunk=i == 0,
             )
             audio_queue.put(supported_type_chunk)  # Put the audio chunk into the queue
+            print(f"Generated chunk {i+1} / {len(audio_files)}")
 
         # Combine audio files after all chunks are generated
         output_file_path = audio_tasks[task_id]["file_path"]
-        combine_audio_files(audio_files, output_file_path, format=OutputFormat.MP3)
+        combine_audio_files(audio_files, output_file_path, format=output_format)
 
-        audio_queue.put(None)  # Signal the end of the stream
+        # Signal the end of the stream using the sentinel object
+        audio_queue.put(END_OF_STREAM_SENTINEL)
         audio_tasks[task_id]["status"] = "completed"
 
     except Exception as e:
+        print(f"Audio generation failed for task {task_id}: {str(e)}")
         audio_tasks[task_id]["status"] = f"failed: {str(e)}"
-        audio_queue.put(None)  # Signal an error
+        # Signal the end of the stream in case of an error
+        audio_queue.put(END_OF_STREAM_SENTINEL)
 
     finally:
         # Cleanup temporary files
@@ -194,15 +207,15 @@ def generate_audio_task(
 def stream_audio(task_id):
     """Streams audio chunks from the queue as they become available."""
     audio_queue = audio_tasks[task_id]["queue"]
-    timeout_seconds = 0.5  # Adjust as needed
+    timeout_seconds = 5  # Adjust as needed
 
     try:
         while True:
             try:
                 audio_tasks[task_id]["waiting"] = False  # Not waiting (initially)
                 chunk = audio_queue.get(timeout=timeout_seconds)
-                if chunk is None:  # End of stream signaled
-                    print("End of stream detected (chunk is None)")
+                if chunk is END_OF_STREAM_SENTINEL:  # End of stream signaled
+                    print("End of stream detected (sentinel object)")
                     break
                 audio_tasks[task_id]["waiting"] = False  # Not waiting (got a chunk)
                 yield chunk
